@@ -1,0 +1,55 @@
+{
+  "name": "preptest",
+  "version": "1.0.0",
+  "description": "A tool for test preparation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "rsbuild dev",
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nskowshik/preptest.git"
+  },
+  "keywords": [
+    "React",
+    "Next.js",
+    "TypeScript",
+    "Node.js",
+    "Test Preparation",
+    "State Management",
+    "RsPack"
+  ],
+  "author": "Kowshik Sudarsan",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/nskowshik/preptest/issues"
+  },
+  "homepage": "https://github.com/nskowshik/preptest#readme",
+  "devDependencies": {
+    "@rsbuild/core": "^2.0.9",
+    "@rsbuild/plugin-react": "^2.0.1",
+    "@rsbuild/plugin-svgr": "^2.0.3",
+    "@tailwindcss/postcss": "^4.3.0",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "prettier": "^3.8.3",
+    "tailwindcss": "^4.3.0"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.12.0",
+    "@tailwindcss/node": "^4.3.0",
+    "axios": "^1.16.1",
+    "csso": "^5.0.5",
+    "nth-check": "^3.0.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-redux": "^9.3.0",
+    "react-router-dom": "^7.16.0",
+    "redux": "^5.0.1"
+  }
+}
