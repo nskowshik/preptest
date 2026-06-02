@@ -30,6 +30,7 @@ const TestCreation = () => {
             const topics = response.data;
             const topicsOptions = topics?.data?.map((topic) => ({ label: topic.name, value: topic.id }));
             setTopics(topicsOptions);
+            setSubTopics([]);
         } catch (error) {
             console.error('Error fetching topics:', error);
         }
@@ -40,7 +41,7 @@ const TestCreation = () => {
             const data = await apiClient.get(`/sub-topics/topic/${topicId}`);
             const subTopics = data.data;
             const subTopicsOptions = subTopics?.data?.map((subTopic) => ({ label: subTopic.name, value: subTopic.id }));
-            setSubTopics(subTopicsOptions);
+            setSubTopics((prev) => [...prev, ...subTopicsOptions]);
         } catch (error) {
             console.error('Error fetching sub-topics:', error);
         }
@@ -48,28 +49,51 @@ const TestCreation = () => {
 
     const handleSubjectChange = (event) => {
         const subjectId = event.target.value;
-        setFormData({
-            ...formData,
+        setFormData((prev) => ({
+            ...prev,
             subject: subjectId,
-        });
+            topic: [],
+            subTopic: []
+        }));
         getTopicBySubject(subjectId);
     };
 
     const handleTopicChange = (event) => {
-        const topicId = event.target.value;
-        setFormData({
-            ...formData,
+        const topicId = event.target.value.filter((id) => id !== '');
+        setFormData((prev) => ({
+            ...prev,
             topic: topicId,
-        });
-        getSubTopics(topicId);
+            subTopic: [],
+        }));
+        topicId?.map((id) => getSubTopics(id));
     };
 
     const handleSubtopicChange = (event) => {
-        const subTopicId = event.target.value;
-        setFormData({
-            ...formData,
+        const subTopicId = event.target.value.filter((id) => id !== '');
+        setFormData((prev) => ({
+            ...prev,
             subTopic: subTopicId,
-        });
+        }));
+    };
+
+    const createTest = () => {
+        const formData = {
+            name: formData.name,
+            type: 'practice',
+            subject: formData.subject,
+            topics: [formData.topic],
+            sub_topics: [formData.subTopic],
+            correct_marks: 4,
+            wrong_marks: -1,
+            unattempt_marks: 0,
+            difficulty: 'medium',
+            total_time: 60,
+            total_marks: 250,
+            total_questions: 50,
+            status: null,
+        }
+        const response = apiClient.post('/tests', formData);
+        console.log(response);
     };
 
     useEffect(() => {
@@ -118,13 +142,13 @@ const TestCreation = () => {
                 {/* Topic */}
                 <div>
                     <label className="mb-3 block  ">Topic</label>
-                    <Select label="Topic" value={formData.topic} options={topics} onChange={handleTopicChange} />
+                    <Select label="Topic" value={formData.topic} options={topics} onChange={handleTopicChange} enableMultiple />
                 </div>
 
                 {/* Sub Topic */}
                 <div>
                     <label className="mb-3 block  ">Sub Topic</label>
-                    <Select label="Sub Topic" value={formData.subTopic} options={subTopics} onChange={handleSubtopicChange} />
+                    <Select label="Sub Topic" value={formData.subTopic} options={subTopics} onChange={handleSubtopicChange} enableMultiple />
 
                 </div>
 
@@ -225,7 +249,7 @@ const TestCreation = () => {
                     Cancel
                 </button>
 
-                <button className="h-14 rounded-xl bg-indigo-500 px-12 text-white">
+                <button className="h-14 rounded-xl bg-indigo-500 px-12 text-white" onClick={createTest}>
                     Next
                 </button>
             </div>
