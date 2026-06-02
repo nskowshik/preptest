@@ -1,35 +1,38 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import Layout from './layout';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import TestCreation from './pages/TestCreation';
+import TestTracking from './pages/TestTracking';
+import Settings from './pages/Settings';
 
 const App = () => {
 
 
-    useEffect(() => {
-        const fetchData = async () => {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/v1/auth/login`);
-            const data = await response.json();
-            console.log(data);
-        };
-        fetchData();
-    }, []);
+    const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
     return (
-        <div>
-            <Layout />
-            <Routes>
-                <Route
-                    path="/"
-                    element={
-                        <main>
-                            <h1>PrepTest</h1>
-                        </main>
-                    }
-                />
-                <Route path="/login" element={<Login />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </div>
+        <Routes>
+            <Route
+                path="/"
+                element={
+                    isAuthenticated ? (
+                        <Layout />
+                    ) : (
+                        <Navigate to="/login" replace />
+                    )
+                }
+            >
+                <Route index element={<Dashboard />} />
+                <Route path="test-creation" element={<TestCreation />} />
+                <Route path="test-tracking" element={<TestTracking />} />
+                <Route path="settings" element={<Settings />} />
+            </Route>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
     );
 };
 
