@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import branding from '../assets/branding.svg';
@@ -12,9 +12,13 @@ const Layout = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+
+
     const user = useSelector((state) => state.auth.user);
 
-    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const isTestCreationPage = location?.pathname?.includes('test-questions');
+
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(isTestCreationPage);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
     const navItems = useMemo(
@@ -26,7 +30,10 @@ const Layout = () => {
         []
     );
 
+
     const closeMobileSidebar = () => setMobileSidebarOpen(false);
+
+
 
     const handleLogout = () => {
         document.cookie = 'isAuthenticated=false; path=/; SameSite=Lax';
@@ -43,12 +50,13 @@ const Layout = () => {
                 <button
                     type="button"
                     aria-label="Close sidebar"
-                    onClick={closeMobileSidebar}
+                    onClick={() => closeMobileSidebar()}
                     className="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
                 />
             )}
 
             {/* Sidebar */}
+
             <aside
                 className={[
                     'fixed left-0 top-0 z-50 h-dvh w-72 border-r border-slate-200 bg-white md:translate-x-0',

@@ -53,7 +53,16 @@ const Dashboard = () => {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="position-relative h-screen overflow-y-auto font-sans">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading details...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
   return (
     <div className="space-y-2">
