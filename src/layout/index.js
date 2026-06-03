@@ -19,12 +19,12 @@ const Layout = () => {
 
     const navItems = useMemo(
         () => [
-            { to: '/', label: 'Dashboard' ,icon: DashboardIcon},
-            { to: '/test-creation', label: 'Test Creation' ,icon: CreationIcon},
-            { to: '/test-tracking', label: 'Test Tracking' ,icon: TrackingIcon },
-        ],  
-        []  
-    );  
+            { to: '/', label: 'Dashboard', icon: DashboardIcon },
+            { to: '/test-creation', label: 'Test Creation', icon: CreationIcon },
+            { to: '/test-tracking', label: 'Test Tracking', icon: TrackingIcon },
+        ],
+        []
+    );
 
     const closeMobileSidebar = () => setMobileSidebarOpen(false);
 
@@ -139,36 +139,36 @@ const Layout = () => {
                                                     navigate('/settings');
                                                 }}
                                                 className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                                        >
-                                        Settings
+                                            >
+                                                Settings
                                             </button>
-                                             <button
-                                    type="button"
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={handleLogout}
-                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                                >
-                                    Logout
-                                </button>
-                                         </div>
-                                     )}
+                                            <button
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={handleLogout}
+                                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                                            >
+                                                Logout
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                           </div>
-                       </div>
+                            </div>
+                        </div>
                     </header>
                 </div>
 
                 {/* Page content */}
                 <div >
                     <main>
-                        <div className="min-h-[calc(100dvh-4rem)]  bg-white p-4 sm:p-6">
+                        <div className="min-h-[calc(100dvh-4rem)]  bg-white">
                             <Outlet />
                         </div>
                     </main>
                 </div>
             </div>
         </div>
-    ); 
-}; 
- 
+    );
+};
+
 export default Layout;

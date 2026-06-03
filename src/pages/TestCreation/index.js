@@ -1,255 +1,167 @@
-import React, { useState, useEffect } from 'react';
-import { Select } from '../../ui';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '../../api';
+import { useDispatch, useSelector } from 'react-redux';
+import { setTests } from '../../store/testSlice';
+import { TABS, FORM_CONFIG } from './constants';
+import FormField from './FormField';
+import { useNavigate } from 'react-router-dom';
+
+const buildDefaultFormData = () =>
+    FORM_CONFIG.reduce((acc, field) => {
+        acc[field.storeKey] = field.defaultValue;
+        return acc;
+    }, {});
 
 const TestCreation = () => {
-    const [difficulty, setDifficulty] = useState('easy');
-    const [subjects, setSubjects] = useState([]);
-    const [topics, setTopics] = useState([]);
-    const [subTopics, setSubTopics] = useState([]);
-    const [formData, setFormData] = useState({
-        subject: '',
-        topic: '',
-        subTopic: '',
-    });
+    const dispatch = useDispatch();
+    const navigate = useNavigate()
+    const storedTest = useSelector((state) => state.test);
 
-    const fetchSubjects = async () => {
+    const [formData, setFormData] = useState(() => ({
+        ...buildDefaultFormData(),
+        ...storedTest,
+    }));
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+
+    const [fieldOptions, setFieldOptions] = useState({});
+    const [activeTab, setActiveTab] = useState(TABS[0].value);
+    const [loading, setLoading] = useState(false);
+
+    const loadOptions = useCallback(async (fieldConfig, depValue) => {
+        if (!fieldConfig.fetchOptions) return;
         try {
-            const response = await apiClient.get('/subjects');
-            const subjectsData = response.data;
-            const subjectsOptions = subjectsData?.data?.map((subject) => ({ label: subject.name, value: subject.id }));
-            setSubjects(subjectsOptions);
-        } catch (error) {
-            console.error('Error fetching subjects:', error);
+            const options = await fieldConfig.fetchOptions(depValue);
+            setFieldOptions((prev) => ({ ...prev, [fieldConfig.id]: options }));
+        } catch (err) {
+            console.error(`Error loading options for "${fieldConfig.id}":`, err);
         }
-    };
-
-    const getTopicBySubject = async (subjectId) => {
-        try {
-            const response = await apiClient.get(`/topics/subject/${subjectId}`);
-            const topics = response.data;
-            const topicsOptions = topics?.data?.map((topic) => ({ label: topic.name, value: topic.id }));
-            setTopics(topicsOptions);
-            setSubTopics([]);
-        } catch (error) {
-            console.error('Error fetching topics:', error);
-        }
-    };
-
-    const getSubTopics = async (topicId) => {
-        try {
-            const data = await apiClient.get(`/sub-topics/topic/${topicId}`);
-            const subTopics = data.data;
-            const subTopicsOptions = subTopics?.data?.map((subTopic) => ({ label: subTopic.name, value: subTopic.id }));
-            setSubTopics((prev) => [...prev, ...subTopicsOptions]);
-        } catch (error) {
-            console.error('Error fetching sub-topics:', error);
-        }
-    };
-
-    const handleSubjectChange = (event) => {
-        const subjectId = event.target.value;
-        setFormData((prev) => ({
-            ...prev,
-            subject: subjectId,
-            topic: [],
-            subTopic: []
-        }));
-        getTopicBySubject(subjectId);
-    };
-
-    const handleTopicChange = (event) => {
-        const topicId = event.target.value.filter((id) => id !== '');
-        setFormData((prev) => ({
-            ...prev,
-            topic: topicId,
-            subTopic: [],
-        }));
-        topicId?.map((id) => getSubTopics(id));
-    };
-
-    const handleSubtopicChange = (event) => {
-        const subTopicId = event.target.value.filter((id) => id !== '');
-        setFormData((prev) => ({
-            ...prev,
-            subTopic: subTopicId,
-        }));
-    };
-
-    const createTest = () => {
-        const formData = {
-            name: formData.name,
-            type: 'practice',
-            subject: formData.subject,
-            topics: [formData.topic],
-            sub_topics: [formData.subTopic],
-            correct_marks: 4,
-            wrong_marks: -1,
-            unattempt_marks: 0,
-            difficulty: 'medium',
-            total_time: 60,
-            total_marks: 250,
-            total_questions: 50,
-            status: null,
-        }
-        const response = apiClient.post('/tests', formData);
-        console.log(response);
-    };
-
-    useEffect(() => {
-        fetchSubjects();
     }, []);
 
+    useEffect(() => {
+        FORM_CONFIG.forEach((field) => {
+            if (field.fetchOptions && !field.dependsOn) {
+                loadOptions(field, undefined);
+            }
+        });
+
+        return () => {
+            dispatch(setTests(formDataRef.current));
+        };
+    }, [dispatch, loadOptions]);
+
+    const handleChange = useCallback(
+        (fieldId, newValue) => {
+            const fieldConfig = FORM_CONFIG.find((f) => f.id === fieldId);
+            if (!fieldConfig) return;
+
+            setFormData((prev) => {
+                const next = { ...prev, [fieldConfig.storeKey]: newValue };
+
+                (fieldConfig.onChangeSideEffects ?? []).forEach((sideId) => {
+                    const sideField = FORM_CONFIG.find((f) => f.id === sideId);
+                    if (sideField) next[sideField.storeKey] = sideField.defaultValue;
+                });
+
+                return next;
+            });
+
+            (fieldConfig.triggerFetch ?? []).forEach((depFieldId) => {
+                const depField = FORM_CONFIG.find((f) => f.id === depFieldId);
+                if (depField) loadOptions(depField, newValue);
+            });
+        },
+        [loadOptions]
+    );
+
+    const createTest = async () => {
+        setLoading(true);
+        try {
+
+            const response = await apiClient.post('/tests', formData);
+            console.log('Test created:', response);
+            if (response?.data?.status === "success") {
+                navigate(`/test-questions/${response?.data?.data?.id}`);
+                // TODO: Navigate to test details or show success message
+            }
+        } catch (err) {
+            console.error('Error creating test:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const mainFields = FORM_CONFIG.filter((f) => f.section === 'main');
+    const markingFields = FORM_CONFIG.filter((f) => f.section === 'marking');
+
     return (
-        <div className="min-h-screen bg-white p-4">
-            {/* Breadcrumb */}
+        <div className="min-h-screen bg-white p-6 text-sm">
             <div className="mb-6 flex items-center gap-3 text-gray-500">
                 <span>Test Creation</span>
                 <span>/</span>
                 <span>Create Test</span>
                 <span>/</span>
-                <span className="text-gray-800">Chapter Wise</span>
+                <span className="text-gray-800">{TABS.find((t) => t.value === activeTab)?.label}</span>
             </div>
 
-            {/* Tabs */}
-            <div className="mb-4 inline-flex rounded-xl border p-0.5    ">
-                <button className="rounded-lg bg-indigo-50 px-4 py-2 text-indigo-600">
-                    Chapter Wise
-                </button>
-
-                <button className="px-4 py-2 text-gray-500">PYQ</button>
-
-                <button className="px-4 py-2 text-gray-500">Mock Test</button>
+            <div className="mb-4 inline-flex rounded-xl border p-0.5">
+                {TABS.map((tab) => (
+                    <button
+                        key={tab.value}
+                        onClick={() => {
+                            setActiveTab(tab.value)
+                            setFormData(prevState => ({ ...prevState, type: tab.value }))
+                        }}
+                        className={
+                            activeTab === tab.value
+                                ? 'rounded-lg bg-indigo-50 px-4 py-2 text-indigo-600'
+                                : 'px-4 py-2 text-gray-500'
+                        }
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
-            {/* Form */}
             <div className="grid grid-cols-2 gap-x-8 gap-y-8">
-                {/* Subject */}
-                <div>
-                    <label className="mb-3 block  ">Subject</label>
-                    <Select label="Subject" value={formData.subject} options={subjects} onChange={handleSubjectChange} />
-                </div>
-
-                {/* Test Name */}
-                <div>
-                    <label className="mb-3 block  ">Name of Test</label>
-                    <input
-                        placeholder="Enter name of Test"
-                        className="h-14 w-full rounded-xl border px-4"
-                    />
-                </div>
-
-                {/* Topic */}
-                <div>
-                    <label className="mb-3 block  ">Topic</label>
-                    <Select label="Topic" value={formData.topic} options={topics} onChange={handleTopicChange} enableMultiple />
-                </div>
-
-                {/* Sub Topic */}
-                <div>
-                    <label className="mb-3 block  ">Sub Topic</label>
-                    <Select label="Sub Topic" value={formData.subTopic} options={subTopics} onChange={handleSubtopicChange} enableMultiple />
-
-                </div>
-
-                {/* Duration */}
-                <div>
-                    <label className="mb-3 block  ">Duration (Minutes)</label>
-                    <input
-                        type="number"
-                        placeholder="Enter duration"
-                        className="h-14 w-full rounded-xl border px-4"
-                    />
-
-                </div>
-
-                {/* Difficulty */}
-                <div>
-
-                    <label className="mb-1 block  ">
-                        Test Difficulty Level
-                    </label>
-
-                    <div className="flex gap-8">
-                        {['easy', 'medium', 'difficult'].map((item) => (
-                            <label
-                                key={item}
-                                className="flex cursor-pointer items-center gap-3"
-                            >
-                                <input
-                                    type="radio"
-                                    checked={difficulty === item}
-                                    onChange={() => setDifficulty(item)}
-                                />
-
-                                <span className="capitalize">{item}</span>
-                            </label>
-                        ))}
+                {mainFields.map((field) => (
+                    <div key={field.id} className={field.span}>
+                        <label className="mb-3 block">{field.label}</label>
+                        <FormField
+                            config={field}
+                            value={formData[field.storeKey]}
+                            options={fieldOptions[field.id]}
+                            onChange={handleChange}
+                        />
                     </div>
-                </div>
+                ))}
             </div>
 
-            {/* Marking Scheme */}
             <div className="mt-8">
-                <h3 className="mb-8 text-2xl ">Marking Scheme:</h3>
-
+                <h3 className="mb-8 text-2xl">Marking Scheme:</h3>
                 <div className="grid grid-cols-5 gap-10">
-                    <div>
-                        <label className="mb-3 block ">Wrong Answer</label>
-
-                        <input
-                            defaultValue="-1"
-                            className="h-14 w-full rounded-xl border px-4"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="mb-3 block ">Unattempted</label>
-
-                        <input
-                            defaultValue="+0"
-                            className="h-14 w-full rounded-xl border px-4"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="mb-3 block ">Correct Answer</label>
-
-                        <input
-                            defaultValue="+5"
-                            className="h-14 w-full rounded-xl border px-4"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="mb-3 block ">No of Questions</label>
-
-                        <input
-                            placeholder="Ex:250"
-                            className="h-14 w-full rounded-xl border px-4"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="mb-3 block  text-gray-400">
-                            Total Marks
-                        </label>
-
-                        <input
-                            placeholder="Ex:250 Marks"
-                            className="h-14 w-full rounded-xl border px-4"
-                        />
-                    </div>
+                    {markingFields.map((field) => (
+                        <div key={field.id}>
+                            <label className="mb-3 block">{field.label}</label>
+                            <FormField
+                                config={field}
+                                value={formData[field.storeKey]}
+                                options={fieldOptions[field.id]}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Actions */}
             <div className="mt-16 flex justify-end gap-6">
-                <button className="h-14 rounded-xl bg-gray-100 px-12 text-indigo-600">
+                <button className="rounded-xl bg-gray-100 py-[7px] px-[18px] text-indigo-600">
                     Cancel
                 </button>
-
-                <button className="h-14 rounded-xl bg-indigo-500 px-12 text-white" onClick={createTest}>
+                <button
+                    className="rounded-xl bg-indigo-500 py-[7px] px-[18px] text-white"
+                    onClick={createTest}
+                >
                     Next
                 </button>
             </div>
